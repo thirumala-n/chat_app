@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  mail:
+    host: localhost
+    port: 1025
+  ai:
+    provider: openai
+    openai:
+      base-url: https://api.groq.com/openai/v1
+      api-key: test-key
+      chat:
+        options:
+          model: llama-3.3-70b-versatile
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test
+            client-secret: test
+
+app:
+  jwt:
+    secret: test-secret-key-for-jwt-signing-minimum-32-characters
+    access-token-expiration-ms: 900000
+    refresh-token-expiration-ms: 604800000
+  cors:
+    allowed-origins: http://localhost:5173
+  frontend-url: http://localhost:5173
+  upload:
+    dir: target/test-uploads
