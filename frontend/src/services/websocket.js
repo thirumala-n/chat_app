@@ -1,6 +1,6 @@
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
-import { getToken } from './config'
+import { getToken } from '../api/config'
 
 const WS_URL = import.meta.env.VITE_WS_URL || '/api/ws'
 

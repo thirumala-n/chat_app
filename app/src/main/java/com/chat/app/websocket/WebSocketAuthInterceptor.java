@@ -4,6 +4,7 @@ import com.chat.app.security.JwtService;
 import com.chat.app.service.OnlineUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -21,7 +22,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     private final JwtService jwtService;
     private final OnlineUserService onlineUserService;
-    private final WebSocketEventPublisher eventPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -38,7 +39,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                     String userId = jwtService.extractUserId(token);
                     accessor.setUser(() -> userId);
                     onlineUserService.setUserOnline(userId);
-                    eventPublisher.publishOnlineStatus(userId, "ONLINE");
+                    applicationEventPublisher.publishEvent(
+                            new UserPresenceChangedEvent(this, userId, "ONLINE"));
                 } catch (Exception e) {
                     log.warn("WebSocket auth failed: {}", e.getMessage());
                 }
@@ -54,7 +56,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         if (accessor.getUser() != null) {
             String userId = accessor.getUser().getName();
             onlineUserService.setUserOffline(userId);
-            eventPublisher.publishOnlineStatus(userId, "OFFLINE");
+            applicationEventPublisher.publishEvent(
+                    new UserPresenceChangedEvent(this, userId, "OFFLINE"));
         }
     }
 }

@@ -3,6 +3,7 @@ package com.chat.app.websocket;
 import com.chat.app.dto.response.MessageResponse;
 import com.chat.app.dto.response.NotificationResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
@@ -43,5 +44,10 @@ public class WebSocketEventPublisher {
 
     public void publishOnlineStatus(String userId, String status) {
         messagingTemplate.convertAndSend("/topic/presence", (Object) Map.of("userId", userId, "status", status));
+    }
+
+    @EventListener
+    public void onUserPresenceChanged(UserPresenceChangedEvent event) {
+        publishOnlineStatus(event.getUserId(), event.getStatus());
     }
 }

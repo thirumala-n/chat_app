@@ -45,7 +45,7 @@ public class Notification extends BaseEntity {
     @Column(length = 100)
     private String referenceId;
 
-    @Column(nullable = false)
+    @Column(name = "is_read", nullable = false)
     @Builder.Default
     private boolean read = false;
 }
