@@ -1,28 +1,44 @@
 import { Link } from 'react-router-dom'
-import { MessageSquare } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 
 export default function AuthLayout({ children, title, subtitle }) {
   return (
-    <div className="flex min-h-screen">
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center bg-gradient-to-br from-primary-700 to-primary-900 p-12">
-        <div className="flex items-center gap-3 mb-8">
-          <MessageSquare className="h-10 w-10 text-white" />
-          <span className="text-2xl font-bold text-white">AI Chat Platform</span>
-        </div>
-        <h1 className="text-4xl font-bold text-white mb-4">Connect. Chat. Collaborate.</h1>
-        <p className="text-primary-200 text-lg max-w-md">
-          Enterprise-grade real-time messaging with AI-powered assistance.
-          Built for teams that move fast.
-        </p>
-      </div>
-      <div className="flex w-full lg:w-1/2 flex-col justify-center px-8 py-12 bg-surface">
-        <div className="mx-auto w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <MessageSquare className="h-8 w-8 text-primary-500" />
-            <span className="text-xl font-bold">AI Chat Platform</span>
+    <div className="auth-root">
+      {/* Left decorative panel */}
+      <div className="auth-left">
+        <div className="auth-left-bg" />
+        <div className="auth-left-content">
+          <div className="auth-brand">
+            <div className="auth-brand-icon"><Sparkles size={18} /></div>
+            <span className="auth-brand-name">AI Chat</span>
           </div>
-          <h2 className="text-2xl font-bold mb-1">{title}</h2>
-          <p className="text-slate-400 mb-8">{subtitle}</p>
+          <h1 className="auth-tagline">
+            Your intelligent<br />assistant, always<br />ready to help.
+          </h1>
+          <p className="auth-tagline-sub">
+            Have natural conversations, get instant answers, write better code,
+            and think through complex problems — all in one place.
+          </p>
+        </div>
+        <div className="auth-testimonial">
+          <p className="auth-testimonial-text">
+            "The most natural AI interface I've ever used. It just gets what I'm asking."
+          </p>
+          <p className="auth-testimonial-author">— Early access user</p>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div className="auth-right">
+        <div className="auth-form-card">
+          {/* Mobile brand */}
+          <div className="auth-mobile-brand">
+            <div className="auth-brand-icon" style={{ width: 30, height: 30 }}><Sparkles size={15} /></div>
+            <span className="auth-brand-name">AI Chat</span>
+          </div>
+
+          <h2 className="auth-form-title">{title}</h2>
+          <p className="auth-form-sub">{subtitle}</p>
           {children}
         </div>
       </div>
@@ -31,5 +47,9 @@ export default function AuthLayout({ children, title, subtitle }) {
 }
 
 export function AuthLink({ to, children }) {
-  return <Link to={to} className="text-primary-400 hover:text-primary-300 transition-colors">{children}</Link>
+  return (
+    <Link to={to} className="auth-link">
+      {children}
+    </Link>
+  )
 }

@@ -1,0 +1,27 @@
+# Environment and Secret Files
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+credentials.json
+client_secret*.json
+
+# Spring local configs
+application-local.properties
+application-local.yml
+app/src/main/resources/application-local.properties
+app/src/main/resources/application-local.yml
+
+# Build / Dependencies / Logs
+target/
+dist/
+node_modules/
+*.log
+
+# IDE & OS files
+.idea/workspace.xml
+.idea/shelf/
+.DS_Store
+Thumbs.db

@@ -4,64 +4,133 @@ import { useAuth } from '../context/AuthContext'
 import AuthLayout, { AuthLink } from '../components/AuthLayout'
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ username: '', email: '', password: '', firstName: '', lastName: '' })
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    email: '',
+    password: '',
+  })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { register } = useAuth()
   const navigate = useNavigate()
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+  const handleChange = (e) =>
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
     setLoading(true)
     try {
       await register(form)
       navigate('/chat')
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.fieldErrors
-        ? Object.values(err.response.data.fieldErrors).join(', ')
-        : 'Registration failed')
+      const data = err.response?.data
+      if (data?.fieldErrors) {
+        setError(Object.values(data.fieldErrors).join(', '))
+      } else {
+        setError(data?.message || 'Registration failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  const inputClass = "w-full rounded-lg bg-surface-light border border-slate-600 px-4 py-2.5 text-white placeholder-slate-500 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-
   return (
-    <AuthLayout title="Create account" subtitle="Get started with AI Chat Platform">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">{error}</div>}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">First name</label>
-            <input name="firstName" value={form.firstName} onChange={handleChange} className={inputClass} />
+    <AuthLayout title="Create your account" subtitle="Start chatting with AI in seconds">
+      <form onSubmit={handleSubmit} noValidate>
+        {error && <div className="auth-error" role="alert">{error}</div>}
+
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="reg-firstName" className="form-label">First name</label>
+            <input
+              id="reg-firstName"
+              name="firstName"
+              className="form-input"
+              placeholder="Jane"
+              value={form.firstName}
+              onChange={handleChange}
+              autoFocus
+            />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Last name</label>
-            <input name="lastName" value={form.lastName} onChange={handleChange} className={inputClass} />
+          <div className="form-group">
+            <label htmlFor="reg-lastName" className="form-label">Last name</label>
+            <input
+              id="reg-lastName"
+              name="lastName"
+              className="form-input"
+              placeholder="Smith"
+              value={form.lastName}
+              onChange={handleChange}
+            />
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Username</label>
-          <input name="username" value={form.username} onChange={handleChange} required className={inputClass} />
+
+        <div className="form-group">
+          <label htmlFor="reg-username" className="form-label">Username</label>
+          <input
+            id="reg-username"
+            name="username"
+            className="form-input"
+            placeholder="janesmith"
+            value={form.username}
+            onChange={handleChange}
+            required
+            autoComplete="username"
+          />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
-          <input name="email" type="email" value={form.email} onChange={handleChange} required className={inputClass} />
+
+        <div className="form-group">
+          <label htmlFor="reg-email" className="form-label">Email address</label>
+          <input
+            id="reg-email"
+            name="email"
+            type="email"
+            className="form-input"
+            placeholder="you@example.com"
+            value={form.email}
+            onChange={handleChange}
+            required
+            autoComplete="email"
+          />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
-          <input name="password" type="password" value={form.password} onChange={handleChange} required minLength={8} className={inputClass} />
+
+        <div className="form-group">
+          <label htmlFor="reg-password" className="form-label">Password</label>
+          <input
+            id="reg-password"
+            name="password"
+            type="password"
+            className="form-input"
+            placeholder="At least 8 characters"
+            value={form.password}
+            onChange={handleChange}
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
         </div>
-        <button type="submit" disabled={loading}
-          className="w-full rounded-lg bg-primary-600 py-2.5 font-medium text-white hover:bg-primary-500 disabled:opacity-50 transition-colors">
-          {loading ? 'Creating account...' : 'Create account'}
+
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={loading}
+          aria-busy={loading}
+          style={{ marginTop: 4 }}
+        >
+          {loading ? 'Creating account…' : 'Create account'}
         </button>
-        <p className="text-center text-sm text-slate-400">
-          Already have an account? <AuthLink to="/login">Sign in</AuthLink>
+
+        <p className="auth-footer-text">
+          Already have an account?{' '}
+          <AuthLink to="/login">Sign in</AuthLink>
         </p>
       </form>
     </AuthLayout>

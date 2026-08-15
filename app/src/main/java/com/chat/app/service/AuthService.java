@@ -33,8 +33,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
+import java.util.HashSet;
 import java.util.Set;
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -72,7 +73,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
-                .roles(Set.of(userRole))
+                .roles(new HashSet<>(Set.of(userRole)))
                 .build();
 
         user = userRepository.save(user);
@@ -199,7 +200,7 @@ public class AuthService {
                 .lastName(lastName)
                 .profileImageUrl(picture)
                 .emailVerified(true)
-                .roles(Set.of(userRole))
+                .roles(new HashSet<>(Set.of(userRole)))
                 .build());
     }
 
