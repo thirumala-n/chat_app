@@ -9,6 +9,8 @@ target/
 .env.*
 application-local.properties
 application-local.yml
+credentials.json
+client_secret*.json
 
 ### STS ###
 .apt_generated
