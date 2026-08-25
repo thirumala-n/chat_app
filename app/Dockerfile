@@ -35,9 +35,9 @@ USER appuser
 # Expose default port
 EXPOSE 8080
 
-# Configure JVM flags optimized for container memory constraints
+# Configure conservative JVM memory flags tailored for Render Free 512 MiB container
 ENV PORT=8080 \
-    JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
+    JAVA_OPTS="-Xms180m -Xmx220m -XX:MetaspaceSize=96m -XX:MaxMetaspaceSize=112m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC"
 
 # Run Spring Boot application, dynamically binding to $PORT provided by Render
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -Dserver.port=${PORT} -Djava.security.egd=file:/dev/./urandom -jar app.jar"]
