@@ -137,10 +137,7 @@ export function useAiChat() {
           const dataLines = []
           for (const line of lines) {
             if (line.startsWith('data:')) {
-              let chunk = line.slice(5)
-              if (chunk.startsWith(' ')) {
-                chunk = chunk.slice(1)
-              }
+              const chunk = line.slice(5)
               if (chunk !== '[DONE]') {
                 dataLines.push(chunk)
               }
@@ -166,15 +163,13 @@ export function useAiChat() {
       }
 
       // Flush any trailing event in buffer
+      buffer += decoder.decode()
       if (buffer.trim()) {
         const lines = buffer.split(/\r?\n/)
         const dataLines = []
         for (const line of lines) {
           if (line.startsWith('data:')) {
-            let chunk = line.slice(5)
-            if (chunk.startsWith(' ')) {
-              chunk = chunk.slice(1)
-            }
+            const chunk = line.slice(5)
             if (chunk !== '[DONE]') {
               dataLines.push(chunk)
             }

@@ -21,21 +21,33 @@ function MessageSkeleton() {
 }
 
 export default function MessageList({ messages, loading, sending, streaming, currentUser, onSuggestion }) {
-  const bottomRef = useRef(null)
   const containerRef = useRef(null)
+  const isAutoScrollEnabled = useRef(true)
 
-  // Auto-scroll: only scroll when near the bottom, or when sending/streaming
+  // Track if user has manually scrolled up to read earlier messages
+  const handleScroll = () => {
+    const el = containerRef.current
+    if (!el) return
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    isAutoScrollEnabled.current = distanceToBottom < 100
+  }
+
+  // Scroll smoothly when user initiates a message, or stay pinned stably during streaming without jitter
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100
-    if (atBottom || sending || streaming) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+
+    if (sending) {
+      isAutoScrollEnabled.current = true
+    }
+
+    if (isAutoScrollEnabled.current) {
+      el.scrollTop = el.scrollHeight
     }
   }, [messages, sending, streaming])
 
   return (
-    <div className="message-list" ref={containerRef}>
+    <div className="message-list" ref={containerRef} onScroll={handleScroll}>
       <div className="message-list-inner">
         {loading ? (
           <MessageSkeleton />
@@ -58,7 +70,6 @@ export default function MessageList({ messages, loading, sending, streaming, cur
             )}
           </>
         )}
-        <div ref={bottomRef} style={{ height: 1 }} />
       </div>
     </div>
   )
