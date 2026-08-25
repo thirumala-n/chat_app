@@ -11,6 +11,7 @@ export default function ChatPage() {
   const { user } = useAuth()
   const [draft, setDraft] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const {
     conversations,
@@ -62,6 +63,14 @@ export default function ChatPage() {
     []
   )
 
+  const handleToggleSidebar = useCallback(() => {
+    if (window.innerWidth <= 768) {
+      setSidebarOpen((o) => !o)
+    } else {
+      setSidebarCollapsed((c) => !c)
+    }
+  }, [])
+
   // Active conversation title
   const activeConv = conversations.find((c) => c.id === activeConvId)
   const headerTitle = activeConv?.title || (activeConvId ? 'Conversation' : 'New conversation')
@@ -77,6 +86,7 @@ export default function ChatPage() {
         onNew={newConversation}
         onDelete={deleteConversation}
         open={sidebarOpen}
+        collapsed={sidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
       />
 
@@ -84,7 +94,8 @@ export default function ChatPage() {
       <main className="main-content">
         <ChatHeader
           title={headerTitle}
-          onMenuToggle={() => setSidebarOpen((o) => !o)}
+          onMenuToggle={handleToggleSidebar}
+          sidebarCollapsed={sidebarCollapsed}
         />
 
         {/* Error banner */}
@@ -121,17 +132,6 @@ export default function ChatPage() {
           onStop={stopStreaming}
         />
       </main>
-
-      {/* Inline style for mobile sidebar toggle button visibility */}
-      <style>{`
-        @media (max-width: 768px) {
-          #sidebar-toggle-btn { display: flex !important; }
-        }
-        @keyframes cursorBlink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
     </div>
   )
 }

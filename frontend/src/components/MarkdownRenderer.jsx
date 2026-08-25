@@ -1,33 +1,40 @@
 import { useState, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Check, Copy } from 'lucide-react'
 
 /**
- * Code block component with language label and copy button.
+ * ChatGPT / Claude style separate code box with top header bar and Copy Code button.
  */
-function CodeBlock({ language, children }) {
+function CodeBlock({ language, code }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(() => {
-    const text = String(children).replace(/\n$/, '')
-    navigator.clipboard.writeText(text).then(() => {
+    navigator.clipboard.writeText(code).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
-  }, [children])
+  }, [code])
 
   return (
     <div className="code-block-wrapper">
       <div className="code-block-header">
         <span className="code-block-lang">{language || 'code'}</span>
-        <button onClick={handleCopy} className="code-copy-btn" aria-label="Copy code">
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-          {copied ? 'Copied' : 'Copy'}
+        <button
+          onClick={handleCopy}
+          className={`code-copy-btn ${copied ? 'copied' : ''}`}
+          aria-label="Copy code to clipboard"
+          title="Copy code"
+        >
+          {copied ? <Check size={14} className="copy-icon check" /> : <Copy size={14} className="copy-icon" />}
+          <span>{copied ? 'Copied!' : 'Copy code'}</span>
         </button>
       </div>
-      <pre style={{ margin: 0, borderRadius: '0 0 10px 10px' }}>
-        <code>{children}</code>
-      </pre>
+      <div className="code-block-content">
+        <pre className="code-block-pre">
+          <code>{code}</code>
+        </pre>
+      </div>
     </div>
   )
 }
@@ -36,23 +43,33 @@ function CodeBlock({ language, children }) {
  * Renders Markdown content with proper styling and code block support.
  */
 export default function MarkdownRenderer({ content }) {
+  if (!content) return null
+
   return (
     <div className="markdown">
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, inline, className, children, ...props }) {
+          pre({ children }) {
+            return <div className="code-block-container">{children}</div>
+          },
+          code({ node, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '')
-            const language = match ? match[1] : ''
+            const text = String(children || '')
+            const isBlock = Boolean(match) || text.includes('\n')
 
-            if (inline) {
-              return <code className={className} {...props}>{children}</code>
+            if (!isBlock) {
+              return (
+                <code className="inline-code" {...props}>
+                  {children}
+                </code>
+              )
             }
 
-            return (
-              <CodeBlock language={language}>
-                {String(children).replace(/\n$/, '')}
-              </CodeBlock>
-            )
+            const language = match ? match[1] : ''
+            const cleanCode = text.replace(/\n$/, '')
+
+            return <CodeBlock language={language} code={cleanCode} />
           },
           a({ href, children }) {
             return (
@@ -63,7 +80,7 @@ export default function MarkdownRenderer({ content }) {
           },
           table({ children }) {
             return (
-              <div style={{ overflowX: 'auto' }}>
+              <div style={{ overflowX: 'auto', margin: '14px 0' }}>
                 <table>{children}</table>
               </div>
             )

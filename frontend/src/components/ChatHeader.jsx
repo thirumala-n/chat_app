@@ -1,17 +1,15 @@
-import { Menu } from 'lucide-react'
+import { PanelLeftClose, PanelLeft } from 'lucide-react'
 
-export default function ChatHeader({ title, onMenuToggle }) {
+export default function ChatHeader({ title, onMenuToggle, sidebarCollapsed }) {
   return (
     <header className="chat-header">
-      {/* Mobile hamburger */}
       <button
-        className="icon-btn"
+        className="icon-btn sidebar-toggle-btn"
         onClick={onMenuToggle}
-        aria-label="Open sidebar"
-        style={{ display: 'none' }}
-        id="sidebar-toggle-btn"
+        aria-label={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+        title={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
       >
-        <Menu size={18} />
+        {sidebarCollapsed ? <PanelLeft size={19} /> : <PanelLeftClose size={19} />}
       </button>
 
       <h2 className="chat-header-title">

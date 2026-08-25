@@ -34,6 +34,7 @@ export default function Sidebar({
   onNew,
   onDelete,
   open,           // mobile: is drawer open?
+  collapsed,      // desktop: is sidebar collapsed?
   onClose,        // mobile: close drawer
 }) {
   const [search, setSearch] = useState('')
@@ -75,7 +76,7 @@ export default function Sidebar({
         aria-hidden="true"
       />
 
-      <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Sidebar navigation">
+      <aside className={`sidebar ${open ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`} aria-label="Sidebar navigation">
         {/* Header */}
         <div className="sidebar-header">
           <div className="sidebar-logo">

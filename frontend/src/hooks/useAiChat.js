@@ -118,28 +118,77 @@ export function useAiChat() {
       const decoder = new TextDecoder()
       let aiContent = ''
       let newConvId = conversationId
+      let buffer = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const text = decoder.decode(value, { stream: true })
-        const lines = text.split('\n')
+        buffer += decoder.decode(value, { stream: true })
+        // SSE events are delimited by double newlines (\n\n or \r\n\r\n)
+        const eventBlocks = buffer.split(/\r?\n\r?\n/)
+        // The last item is the remaining partial/unclosed block
+        buffer = eventBlocks.pop() || ''
 
-        for (const line of lines) {
-          if (line.startsWith('data:')) {
-            const chunk = line.slice(5).trim()
-            if (chunk && chunk !== '[DONE]') {
-              aiContent += chunk
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === tempAiId
-                    ? { ...m, content: aiContent }
-                    : m
-                )
-              )
+        let updated = false
+        for (const block of eventBlocks) {
+          if (!block.trim()) continue
+          const lines = block.split(/\r?\n/)
+          const dataLines = []
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              let chunk = line.slice(5)
+              if (chunk.startsWith(' ')) {
+                chunk = chunk.slice(1)
+              }
+              if (chunk !== '[DONE]') {
+                dataLines.push(chunk)
+              }
             }
           }
+          if (dataLines.length > 0) {
+            // In SSE spec, multiple data: lines within one event are joined by \n
+            const eventData = dataLines.join('\n')
+            aiContent += eventData
+            updated = true
+          }
+        }
+
+        if (updated) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempAiId
+                ? { ...m, content: aiContent }
+                : m
+            )
+          )
+        }
+      }
+
+      // Flush any trailing event in buffer
+      if (buffer.trim()) {
+        const lines = buffer.split(/\r?\n/)
+        const dataLines = []
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            let chunk = line.slice(5)
+            if (chunk.startsWith(' ')) {
+              chunk = chunk.slice(1)
+            }
+            if (chunk !== '[DONE]') {
+              dataLines.push(chunk)
+            }
+          }
+        }
+        if (dataLines.length > 0) {
+          aiContent += dataLines.join('\n')
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempAiId
+                ? { ...m, content: aiContent }
+                : m
+            )
+          )
         }
       }
 

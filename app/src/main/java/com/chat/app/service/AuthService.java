@@ -36,6 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
 import java.util.Set;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Service
@@ -90,6 +92,12 @@ public class AuthService {
         if (!user.isEnabled()) {
             throw new UnauthorizedException("Account is disabled");
         }
+
+        String loginTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'")
+                .withZone(ZoneOffset.UTC)
+                .format(Instant.now());
+        emailService.sendLoginNotificationEmail(user.getEmail(), user.getFullName(), loginTime);
+
         return buildAuthResponse(user);
     }
 

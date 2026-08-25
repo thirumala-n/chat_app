@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -11,10 +12,18 @@ function getInitials(user) {
 
 export default function UserMenu() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 4px' }}>
-      <div className="user-menu-btn" style={{ flex: 1 }}>
+      <button
+        type="button"
+        className="user-menu-btn"
+        style={{ flex: 1 }}
+        onClick={() => navigate('/profile')}
+        title="View profile"
+        aria-label="View profile"
+      >
         <div className="user-avatar" aria-hidden="true">
           {user?.profileImageUrl ? (
             <img src={user.profileImageUrl} alt={user.username || 'avatar'} />
@@ -30,9 +39,10 @@ export default function UserMenu() {
           </div>
           <div className="user-email">{user?.email}</div>
         </div>
-      </div>
+      </button>
 
       <button
+        type="button"
         onClick={logout}
         className="icon-btn"
         title="Sign out"

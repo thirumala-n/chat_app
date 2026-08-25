@@ -1,6 +1,8 @@
 package com.chat.app.security;
 
 import com.chat.app.entity.User;
+import com.chat.app.exception.UnauthorizedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -16,8 +18,8 @@ public class SecurityUtils {
 
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new com.chat.app.exception.UnauthorizedException("Not authenticated");
+        if (authentication == null || !authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
+            throw new UnauthorizedException("Not authenticated");
         }
         return userDetailsService.loadUserEntityByEmail(authentication.getName());
     }

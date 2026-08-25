@@ -33,17 +33,33 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             String authToken = accessor.getFirstNativeHeader("Authorization");
-            if (authToken != null && authToken.startsWith("Bearer ")) {
-                String token = authToken.substring(7);
-                try {
-                    String userId = jwtService.extractUserId(token);
-                    accessor.setUser(() -> userId);
-                    onlineUserService.setUserOnline(userId);
-                    applicationEventPublisher.publishEvent(
-                            new UserPresenceChangedEvent(this, userId, "ONLINE"));
-                } catch (Exception e) {
-                    log.warn("WebSocket auth failed: {}", e.getMessage());
+            if (authToken == null || !authToken.startsWith("Bearer ")) {
+                log.warn("WebSocket CONNECT rejected: Missing or invalid Authorization header");
+                throw new IllegalArgumentException("Unauthorized: Missing or invalid Authorization header");
+            }
+
+            String token = authToken.substring(7).trim();
+            try {
+                if (jwtService.isTokenExpired(token)) {
+                    log.warn("WebSocket CONNECT rejected: JWT token expired");
+                    throw new IllegalArgumentException("Unauthorized: JWT token expired");
                 }
+
+                String userId = jwtService.extractUserId(token);
+                if (userId == null || userId.isBlank()) {
+                    log.warn("WebSocket CONNECT rejected: Missing userId in JWT claims");
+                    throw new IllegalArgumentException("Unauthorized: Invalid token claims");
+                }
+
+                accessor.setUser(() -> userId);
+                onlineUserService.setUserOnline(userId);
+                applicationEventPublisher.publishEvent(
+                        new UserPresenceChangedEvent(this, userId, "ONLINE"));
+            } catch (IllegalArgumentException e) {
+                throw e;
+            } catch (Exception e) {
+                log.warn("WebSocket CONNECT authentication failed: {}", e.getClass().getSimpleName());
+                throw new IllegalArgumentException("Unauthorized: Authentication failed");
             }
         }
 

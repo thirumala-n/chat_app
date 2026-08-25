@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ChatPage from './pages/ChatPage'
+import ProfilePage from './pages/ProfilePage'
 import OAuth2Callback from './pages/OAuth2Callback'
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/chat" element={<ChatPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/chat" replace />} />
