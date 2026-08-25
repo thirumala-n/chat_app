@@ -90,7 +90,7 @@ export default function LoginPage() {
         </div>
 
         <a
-          href="/api/oauth2/authorization/google"
+          href={`${import.meta.env.VITE_API_URL || '/api'}/oauth2/authorization/google`}
           className="btn-google"
           aria-label="Continue with Google"
         >
