@@ -1,8 +1,5 @@
 # AI Chat Application
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-blue?style=for-the-badge&logo=vercel)](https://chat-app-pi-five-gw1ui9jxno.vercel.app)
-> **Live Deployment:** [https://chat-app-pi-five-gw1ui9jxno.vercel.app](https://chat-app-pi-five-gw1ui9jxno.vercel.app)
-
 An intelligent, full-stack conversational platform engineered with a Spring Boot 3 backend and a React 19 single-page frontend. The application addresses the need for secure, responsive, and persistent conversational AI by coupling low-latency streaming interactions with enterprise-ready user authentication, database persistence, and real-time WebSocket communication. Powered by Spring AI integrated with Groq's high-speed LLM inference, it delivers responsive markdown-formatted AI responses alongside complete chat and user lifecycle management.
 
 ---
