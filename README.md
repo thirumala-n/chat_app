@@ -267,142 +267,167 @@ Security is implemented using **Spring Security 6** configured for completely st
 
 ## 🗄️ Database
 
-Persistence is handled by **MySQL 8** (with **H2** utilized in the automated test suite) managed through **Spring Data JPA** and **Hibernate**.
+Persistence is handled by **MySQL 8.0** in production and development (with an in-memory **H2 Database** configured under `application-test.yml` for testing), managed through **Spring Data JPA** and **Hibernate 6**.
 
-### Schema Design & Entity Relationships
+### Persistence Architecture
 
-- All primary domain models inherit from `BaseEntity`, providing a UUID primary key (`GenerationType.UUID`), `createdAt`, and `updatedAt` managed by JPA Auditing (`@EnableJpaAuditing`).
-- **Soft Deletes**: Messages support soft-deletion (`deleted = true`), displaying placeholder text while maintaining conversation continuity.
+- **Primary Key Strategy**: All domain entities inherit from [`BaseEntity`](file:///d:/chat_app/app/src/main/java/com/chat/app/entity/BaseEntity.java) which generates non-sequential UUID strings (`GenerationType.UUID`), preventing enumeration attacks across public APIs.
+- **Auditing**: Automatic timestamping (`createdAt` and `updatedAt`) is managed transparently via `@EnableJpaAuditing` and Spring Data's `AuditingEntityListener`.
+- **Soft Deletion**: Messages implement logical soft-deletion (`deleted = true`), wiping the text content while preserving the timeline thread integrity and reply references.
+- **Schema Management**: Hibernate schema validation and migration are configured to `update` automatically on startup (`spring.jpa.hibernate.ddl-auto=update`).
+
+---
+
+### Entity & Schema Breakdown
+
+| Table Name | Entity Class | Primary Responsibility | Key Fields & Relationships |
+| :--- | :--- | :--- | :--- |
+| `users` | `User` | User identity, authentication credentials, and profile information | UUID, `username` (unique), `email` (unique), `password` (BCrypt), `profileImageUrl`, `status` (ONLINE/OFFLINE), `googleId`, `emailVerified` |
+| `roles` | `Role` | System authorization roles | UUID, `name` (`ROLE_USER`, `ROLE_ADMIN`) |
+| `user_roles` | N/A (Join Table) | Many-to-many relationship between users and roles | `user_id` (FK), `role_id` (FK) |
+| `conversations` | `Conversation` | Direct (1-on-1) and Group chat channels | UUID, `name`, `description`, `avatarUrl`, `type` (`DIRECT`, `GROUP`), `created_by_id` (FK) |
+| `conversation_members` | `ConversationMember` | Channel membership, roles, and user chat preferences | Composite unique `(conversation_id, user_id)`, `role` (`ADMIN`, `MEMBER`), `pinned`, `archived`, `lastReadMessageId` |
+| `messages` | `Message` | Chat messages exchanged between users | UUID, `conversation_id` (FK), `sender_id` (FK), `content` (TEXT), `type` (`TEXT`, `IMAGE`, `VIDEO`, etc.), `status` (`SENT`, `DELIVERED`, `READ`), `reply_to_id` (FK), `forwarded_from_id` (FK), `edited`, `deleted` |
+| `attachments` | `Attachment` | Media attachments linked to chat messages | UUID, `message_id` (FK), `fileName`, `fileUrl`, `contentType`, `fileSize` |
+| `message_reactions` | `MessageReaction` | Emoji reactions attached to messages | Unique constraint `(message_id, user_id, emoji)`, `emoji`, `message_id` (FK), `user_id` (FK) |
+| `notifications` | `Notification` | System and user event alerts | UUID, `recipient_id` (FK), `sender_id` (FK), `type` (`MESSAGE`, `SYSTEM`, `MENTION`), `title`, `body`, `is_read` |
+| `ai_conversations` | `AiConversation` | Isolated user chat sessions with AI assistant | UUID, `user_id` (FK), `title`, `provider` (`OPENAI`), `featureType` (`SUMMARIZE`, `CODE_EXPLAIN`, etc.) |
+| `ai_messages` | `AiMessage` | Chronological prompt and completion history in AI chats | UUID, `conversation_id` (FK), `role` (`user`, `assistant`), `content` (TEXT) |
+| `refresh_tokens` | `RefreshToken` | Persisted JWT refresh tokens for silent renewal | UUID, `token` (unique), `user_id` (FK), `expiresAt`, `revoked` |
+| `email_verification_tokens`| `EmailVerificationToken` | One-time tokens for email address verification | UUID, `token` (unique), `user_id` (FK), `expiresAt`, `used` |
+| `password_reset_tokens` | `PasswordResetToken` | One-time tokens for password recovery | UUID, `token` (unique), `user_id` (FK), `expiresAt`, `used` |
+
+---
+
+### Entity-Relationship Diagram (ERD)
 
 ```mermaid
 erDiagram
-    users ||--o{ user_roles : has
-    roles ||--o{ user_roles : assigned_to
-    users ||--o{ refresh_tokens : owns
-    users ||--o{ email_verification_tokens : receives
-    users ||--o{ password_reset_tokens : requests
-    users ||--o{ conversation_members : participates
-    conversations ||--o{ conversation_members : includes
-    conversations ||--o{ messages : contains
-    users ||--o{ messages : sends
-    messages ||--o{ attachments : contains
-    messages ||--o{ message_reactions : receives
-    users ||--o{ message_reactions : reacts
-    users ||--o{ notifications : receives
-    users ||--o{ ai_conversations : owns
-    ai_conversations ||--o{ ai_messages : contains
+    USERS ||--o{ CONVERSATION_MEMBERS : participates
+    USERS ||--o{ MESSAGES : sends
+    USERS ||--o{ MESSAGE_REACTIONS : reacts
+    USERS ||--o{ NOTIFICATIONS : receives
+    USERS ||--o{ AI_CONVERSATIONS : owns
+    USERS ||--o{ REFRESH_TOKENS : owns
+    USERS }o--o{ ROLES : assigned
 
-    users {
+    CONVERSATIONS ||--o{ CONVERSATION_MEMBERS : includes
+    CONVERSATIONS ||--o{ MESSAGES : contains
+
+    MESSAGES ||--o{ ATTACHMENTS : has
+    MESSAGES ||--o{ MESSAGE_REACTIONS : receives
+
+    AI_CONVERSATIONS ||--o{ AI_MESSAGES : contains
+
+    USERS {
         string id PK
-        string username
-        string email
+        string username UK
+        string email UK
         string password
         string firstName
         string lastName
         string bio
         string profileImageUrl
         string status
-        instant lastSeenAt
+        string googleId
         boolean emailVerified
         boolean enabled
-        string googleId
-        instant createdAt
-        instant updatedAt
+        timestamp createdAt
+        timestamp updatedAt
     }
 
-    roles {
+    ROLES {
         string id PK
-        string name "ROLE_USER, ROLE_ADMIN"
+        string name UK
     }
 
-    conversations {
+    CONVERSATIONS {
         string id PK
         string name
         string description
         string avatarUrl
-        string type "DIRECT, GROUP"
+        string type
         string created_by_id FK
-        instant createdAt
-        instant updatedAt
+        timestamp createdAt
+        timestamp updatedAt
     }
 
-    conversation_members {
+    CONVERSATION_MEMBERS {
         string id PK
         string conversation_id FK
         string user_id FK
-        string role "ADMIN, MEMBER"
+        string role
         boolean pinned
         boolean archived
         string lastReadMessageId
     }
 
-    messages {
+    MESSAGES {
         string id PK
         string conversation_id FK
         string sender_id FK
-        text content
-        string type "TEXT, IMAGE, VIDEO, AUDIO, DOCUMENT, PDF, SYSTEM"
-        string status "SENT, DELIVERED, READ"
         string reply_to_id FK
         string forwarded_from_id FK
+        text content
+        string type
+        string status
         boolean edited
         boolean deleted
         string mentionedUserIds
-        instant createdAt
-        instant updatedAt
+        timestamp createdAt
+        timestamp updatedAt
     }
 
-    attachments {
+    ATTACHMENTS {
         string id PK
         string message_id FK
         string fileName
         string fileUrl
         string contentType
-        long fileSize
-        string thumbnailUrl
+        bigint fileSize
     }
 
-    message_reactions {
+    MESSAGE_REACTIONS {
         string id PK
         string message_id FK
         string user_id FK
         string emoji
     }
 
-    notifications {
+    NOTIFICATIONS {
         string id PK
         string recipient_id FK
         string sender_id FK
-        string type "MESSAGE, SYSTEM, MENTION, REACTION"
+        string type
         string title
         text body
         string referenceId
         boolean is_read
     }
 
-    ai_conversations {
+    AI_CONVERSATIONS {
         string id PK
         string user_id FK
         string title
-        string provider "OPENAI"
+        string provider
         string featureType
-        instant createdAt
-        instant updatedAt
+        timestamp createdAt
+        timestamp updatedAt
     }
 
-    ai_messages {
+    AI_MESSAGES {
         string id PK
         string conversation_id FK
-        string role "user, assistant"
+        string role
         text content
-        instant createdAt
+        timestamp createdAt
     }
 
-    refresh_tokens {
+    REFRESH_TOKENS {
         string id PK
-        string token
+        string token UK
         string user_id FK
-        instant expiresAt
+        timestamp expiresAt
         boolean revoked
     }
 ```
