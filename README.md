@@ -26,104 +26,104 @@ An intelligent, full-stack conversational platform engineered with a Spring Boot
 
 ## 🏗️ Architecture
 
-The application adopts a decoupled client-server architecture. The frontend communicates with the backend via REST endpoints for command/query operations, Server-Sent Events for streaming AI responses, and STOMP over SockJS for bidirectional real-time events.
+The application is architectured around a modern, decoupled client-server paradigm. Communication between the frontend Single Page Application (SPA) and the Spring Boot backend is divided across three distinct channels:
+
+1. **RESTful APIs (`/api/*`)**: Standard request-response cycles for authentication, profile updates, conversation history queries, file uploads, and notification operations.
+2. **Server-Sent Events (`/api/ai/chat/stream`)**: Unidirectional reactive streaming channel that pipes AI token chunks directly from Groq's inference engine to the browser with minimal latency.
+3. **STOMP over SockJS (`/api/ws`)**: Bidirectional real-time publish-subscribe channel for instant message delivery, typing indicators, read receipts, and user presence broadcasts.
 
 ### System Architecture Diagram
 
 ```mermaid
-graph TD
-    subgraph Client ["Frontend (React 19 + Vite)"]
-        UI[Tailwind CSS UI / Markdown Renderer]
-        AuthCtx[Auth Context & Token Storage]
-        AxiosClient[Axios HTTP Client + Interceptors]
-        WSClient[STOMP / SockJS WebSocket Client]
-        SSEClient[SSE Event Stream Reader]
+flowchart TD
+    subgraph Client ["🖥️ Presentation Tier (React 19 + Vite)"]
+        direction TB
+        UI["React SPA UI\n(Tailwind CSS 4 + Markdown Renderer)"]
+        AuthCtx["Auth Context & Token Store\n(Access & Refresh Tokens)"]
+        AxiosClient["Axios HTTP Client\n(401 Silent Token Refresh Interceptor)"]
+        SSEClient["SSE Stream Reader\n(Chunk-by-Chunk Token Parser)"]
+        WSClient["STOMP / SockJS Client\n(@stomp/stompjs)"]
+        
+        UI --> AxiosClient
+        UI --> SSEClient
+        UI --> WSClient
     end
 
-    subgraph Gateway ["Spring Boot 3.5.4 Backend (/api)"]
-        RLFilter[RateLimitFilter (Bucket4j)]
-        JWTFilter[JwtAuthenticationFilter]
-        SecConfig[Spring Security / OAuth2]
+    subgraph Security ["🛡️ Security & Filter Pipeline"]
+        direction TB
+        RateLimit["RateLimitFilter\n(Bucket4j: 100 req/min per IP)"]
+        JWTFilter["JwtAuthenticationFilter\n(HMAC-SHA256 Token Validation)"]
+        SecConfig["Spring Security Filter Chain\n(CORS, CSRF Disabled, Stateless)"]
         
+        RateLimit --> JWTFilter --> SecConfig
+    end
+
+    subgraph Backend ["⚙️ Application & Service Tier (Spring Boot 3.5.4)"]
+        direction TB
         subgraph Controllers ["Controllers Layer"]
-            AuthCtrl[AuthController]
-            UserCtrl[UserController]
-            AiCtrl[AiController]
-            ConvCtrl[ConversationController]
-            MsgCtrl[MessageController]
-            NotifCtrl[NotificationController]
-            WSCtrl[ChatWebSocketController]
+            RESTCtrl["REST Controllers\n(Auth, User, AI, Conversation, Message, Notification)"]
+            WSCtrl["WebSocket Controller\n(ChatWebSocketController: /app/chat.typing)"]
         end
 
         subgraph Services ["Service Layer"]
-            AuthSvc[AuthService]
-            UserSvc[UserService]
-            AiSvc[AiChatService]
-            ConvSvc[ConversationService]
-            MsgSvc[MessageService]
-            NotifSvc[NotificationService]
-            MailSvc[EmailService (Async)]
-            StorageSvc[FileStorageService]
-            PresenceSvc[OnlineUserService]
+            AuthSvc["AuthService & CustomUserDetailsService"]
+            AiSvc["AiChatService & AiPromptTemplates"]
+            ChatSvc["ConversationService & MessageService"]
+            UserSvc["UserService & OnlineUserService"]
+            NotifSvc["NotificationService"]
+            EmailSvc["EmailService (Async JavaMailSender)"]
+            FileSvc["FileStorageService"]
         end
 
-        subgraph EventBroker ["Messaging & Event Broker"]
-            WSEventPub[WebSocketEventPublisher]
-            SimpleBroker[Spring Simple Message Broker (/topic, /queue)]
-        end
+        RESTCtrl --> Services
     end
 
-    subgraph External ["External Services & Providers"]
-        GroqAI["Groq LLM API (OpenAI Compatible)"]
-        GoogleAuth["Google Identity (OAuth 2.0)"]
-        SMTPServer["SMTP Server (Gmail / Custom)"]
+    subgraph Broker ["💬 Messaging & Event Broker"]
+        direction TB
+        WSEventPub["WebSocketEventPublisher"]
+        SimpleBroker["Spring Simple Message Broker\n(/topic: Broadcasts | /queue: User Targeted)"]
+        WSEventPub --> SimpleBroker
     end
 
-    subgraph Persistence ["Persistence Layer"]
-        JPA[Spring Data JPA / Hibernate]
-        MySQL[(MySQL 8 Database)]
+    subgraph External ["🌐 External Providers & APIs"]
+        direction TB
+        GroqAI["Groq Cloud LLM\n(OpenAI-Compatible Endpoint: openai/gpt-oss-120b)"]
+        GoogleAuth["Google Identity\n(OAuth 2.0 Social Sign-In)"]
+        SMTPServer["SMTP Server\n(Gmail / Custom Port 587)"]
     end
 
-    UI --> AxiosClient
-    UI --> WSClient
-    UI --> SSEClient
-    
-    AxiosClient -->|REST Requests| RLFilter
-    SSEClient -->|SSE Stream Request| RLFilter
-    RLFilter --> JWTFilter
-    JWTFilter --> SecConfig
-    SecConfig --> Controllers
+    subgraph Storage ["💾 Persistence & Storage Tier"]
+        direction TB
+        JPA["Spring Data JPA / Hibernate"]
+        MySQL[("MySQL 8.0 Database\n(Users, Conversations, Messages, Tokens)")]
+        DiskStorage[("Local File System\n(/uploads/profiles, /uploads/messages)")]
+        
+        JPA --> MySQL
+        FileSvc --> DiskStorage
+    end
 
-    WSClient <-->|STOMP / SockJS (/api/ws)| WSCtrl
-    WSClient <-->|Pub/Sub Subscriptions| SimpleBroker
+    %% Client communication flows
+    AxiosClient -->|REST Requests: JSON / Multipart| RateLimit
+    SSEClient -->|SSE Stream Request: /ai/chat/stream| RateLimit
+    SecConfig --> RESTCtrl
 
-    AuthCtrl --> AuthSvc
-    UserCtrl --> UserSvc
-    AiCtrl --> AiSvc
-    ConvCtrl --> ConvSvc
-    MsgCtrl --> MsgSvc
-    NotifCtrl --> NotifSvc
+    WSClient -->|STOMP CONNECT with JWT: /api/ws| WSCtrl
+    SimpleBroker -.->|Pub/Sub Events: /topic & /queue| WSClient
+
+    %% Controller to Services & Events
     WSCtrl --> WSEventPub
-
-    AiSvc -->|Spring AI ChatModel| GroqAI
-    AuthSvc -->|OAuth2 Token Validation| GoogleAuth
-    AuthSvc --> MailSvc
-    MailSvc -->|SMTP TLS| SMTPServer
-
-    MsgSvc --> WSEventPub
+    ChatSvc --> WSEventPub
     NotifSvc --> WSEventPub
-    PresenceSvc --> WSEventPub
-    WSEventPub --> SimpleBroker
+    UserSvc --> WSEventPub
 
-    AuthSvc --> JPA
-    UserSvc --> JPA
-    AiSvc --> JPA
-    ConvSvc --> JPA
-    MsgSvc --> JPA
-    NotifSvc --> JPA
-    StorageSvc -->|Local Disk| Uploads[(File System /uploads)]
+    %% Services to External
+    AiSvc -->|Spring AI ChatModel API| GroqAI
+    AuthSvc -->|OAuth2 Token Verification| GoogleAuth
+    AuthSvc --> EmailSvc
+    EmailSvc -->|Async SMTP TLS| SMTPServer
 
-    JPA --> MySQL
+    %% Services to Storage
+    Services --> JPA
 ```
 
 ---
